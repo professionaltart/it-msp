@@ -1,10 +1,10 @@
 # Check when archival last run:
-    $logProps = Export-MailboxDiagnosticLogs <mailboxID> -ExtendedProperties
+    $logProps = Export-MailboxDiagnosticLogs $mailboxID -ExtendedProperties
     $xmlprops = [xml]($logProps.MailboxLog)
-    $xmlprops.Properties.MailboxTable.Property | ? {$_.Name -like "ELC*"}
+    $xmlprops.Properties.MailboxTable.Property | Where-Object {$_.Name -like "ELC*"}
 
     #Also works:
-        ([xml](Export-MailboxDiagnosticLogs $username -ExtendedProperties).MailboxLog).Properties.MailboxTable.Property | ? {$_.Name -like "ELC*"}
+        ([xml](Export-MailboxDiagnosticLogs $username -ExtendedProperties).MailboxLog).Properties.MailboxTable.Property | Where-Object {$_.Name -like "ELC*"}
 
 # from https://learn.microsoft.com/en-us/microsoft-365/troubleshoot/retention/troubleshoot-mrm-email-archive-deletion
 

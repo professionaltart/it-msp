@@ -1,0 +1,40 @@
+#check PowerShell Version
+Write-Host "`nChecking version of PowerShell installed:`n   $($psversiontable.PSVersion)`n`n"
+#check User SIDs present on device
+$SIDs = Get-ChildItem -Path "Registry::HKU" | Where-Object {$_.PSChildName -match "S-1-5-21|S-1-12-1" -and $_.PSChildName -notmatch "_Classes"}
+ 
+if ($sids -eq $null){
+    Write-Host "No User SIDs found on this device`n";
+    } else {
+    foreach ($SID in $SIDs) {
+        # User SID
+        $SIDPath = $SID.PSChildName
+        # Path of Explorer Dropbox integration
+        $SIDExplorerPath = "HKU\$SIDPath\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace"
+        $KeyPathOneDrive = Get-ChildItem -Path "Registry::$SIDExplorerPath" -Recurse | Get-ItemProperty | Where-Object {$_.'(default)' -like "*OneDrive*"}
+        $KeyPathDropBox = Get-ChildItem -Path "Registry::$SIDExplorerPath" -Recurse | Get-ItemProperty | Where-Object {$_.'(default)' -like "*Dropbox*"}
+ 
+        # Output
+        Write-Host "Looking for user SIDs on device:`n   $($SIDPath)`n"
+        Write-Host "User's SID path to Explorer integrations:`n   $($SIDExplorerPath)`n`n"
+ 
+        # Do stuff here
+        Write-Host "Can we find OneDrive Explorer Integration? Searching:";
+        if ($KeyPathOneDrive -ne $null) {
+            Write-Host "   Explorer Integration for OneDrive exists, path is:`n      $(Convert-Path $KeyPathOneDrive.PSPath)`n";
+        }
+        else {
+            Write-Host "   Explorer Integration for OneDrive doesn't exist"
+        }
+        Write-Host "Can we find Dropbox Explorer Integration? Searching:";
+        if ($KeyPathDropBox -ne $null) {
+            Write-Host "   Explorer Integration for Dropbox exists, path is:`n      $(Convert-Path $KeypathDropBox.PSPath)`n Deleting registry key";
+            # uncomment below line to actually delete the key for Dropbox's Explorer integration
+            #  Get-Item -path $KeyPathDropBox | remove-item -recurse;
+            Write-Host "   Verifying - is the Dropbox Integration still present: $(Test-path -path $KeyPathDropBox.PSPath)`n`n"
+        }
+        else {
+            Write-Host "   Explorer Integration for Dropbox doesn't exist `n"
+        }
+    }
+}

@@ -1,0 +1,24 @@
+# enable archive for mailbox
+    enable-mailbox $username -archive
+
+# set archive to autoexpanding for mailbox
+    enable-mailbox $Username -AutoExpandingArchive
+    # If errors, try
+	    Enable-Mailbox -identity $username -Archive
+		
+# Check if Auto-expanding enabled for tenancy:
+	(Get-OrganizationConfig).AutoExpandingArchiveEnabled
+	# or
+	Get-OrganizationConfig | FL AutoExpandingArchiveEnabled
+	# From https://learn.microsoft.com/en-us/purview/enable-autoexpanding-archiving
+		
+# Tips from MS Support 
+	start-managedfolderassistant mailboxname
+	start-managedfolderassistant mailboxname
+	start-managedfolderassistant mailboxname
+	start-managedfolderassistant mailboxname
+	start-managedfolderassistant mailboxname -fullcrawl
+	# x4 makes it more urgent in the queue
+	# -fullcrawl checks all items for tags/policies and updates
+    # If errors, try: 
+        Start-ManagedFolderAssistant (Get-Mailbox -Identity $username).ExchangeGuid
