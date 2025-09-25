@@ -1,0 +1,43 @@
+#check PowerShell Version
+Write-Host "`nChecking version of PowerShell installed:`n   $($psversiontable.PSVersion)`n`n"
+
+#check User SIDs present on device
+$SIDs = Get-ChildItem -Path "Registry::HKU" | Where-Object {$_.PSChildName -match "S-1-5-21|S-1-12-1" -and $_.PSChildName -notmatch "_Classes"}
+ 
+if ($SIDs -eq $null){
+    Write-Host "No User SIDs found on this device (uh-oh!)`n";
+    } else {
+    foreach ($SID in $SIDs) {
+        # User SID
+        $SIDPath = $SID.PSChildName
+        # Username linked to SID
+        $SIDName = Split-Path (Get-ItemProperty -Path "Registry::HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProfileList\$SIDPath" -Name ProfileImagePath).ProfileImagePath -Leaf
+        # Registry Path of Mapped Drives
+        $SIDMappedDrivePath = "HKU\$SIDPath\Network"
+        $SIDMappedDriveLetter = Get-ChildItem -Path Registry::$SIDMappedDrivePath
+         
+        # Output
+        Write-Host "Looking for user SIDs on device.  Can we find any mapped drives?";
+        # Do stuff here
+        if ($SIDMappedDrivePath -ne $null) {
+            Write-Host "   Mapped drives found!`n"
+            # reg query $SIDMappedDrivePath /s /v Remotepath;
+            # Iterate through the found drives
+            foreach ($Drive in $SIDMappedDriveLetter) {
+                $DriveLetter = $Drive.PSChildName
+                $RemotePath = Get-ItemProperty -Path Registry::$SIDMappedDrivePath\$DriveLetter -Name "RemotePath"
+                # output drive letter and remote path via customobject
+                [PSCustomObject]@{
+                    User        = $SIDName
+                    SID         = $SIDPath
+                    DriveLetter = $DriveLetter
+                    RemotePath  = $RemotePath.RemotePath
+                }
+            }
+
+        }
+        else {
+            Write-Host "   No mapped drives found"
+        }
+    }
+}
