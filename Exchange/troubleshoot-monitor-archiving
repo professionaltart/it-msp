@@ -1,0 +1,24 @@
+# Check when archival last run:
+    $logProps = Export-MailboxDiagnosticLogs <mailboxID> -ExtendedProperties
+    $xmlprops = [xml]($logProps.MailboxLog)
+    $xmlprops.Properties.MailboxTable.Property | ? {$_.Name -like "ELC*"}
+
+    #Also works:
+        ([xml](Export-MailboxDiagnosticLogs $username -ExtendedProperties).MailboxLog).Properties.MailboxTable.Property | ? {$_.Name -like "ELC*"}
+
+# from https://learn.microsoft.com/en-us/microsoft-365/troubleshoot/retention/troubleshoot-mrm-email-archive-deletion
+
+# Check MRM diagnostic logs:
+    Export-MailboxDiagnosticLogs $identity -ComponentName MRM
+
+
+# Troubleshooting Retention Policies in Exchange Online - check largest item size
+    Get-MailboxFolderStatistics $username -FolderScope inbox -IncludeOldestAndNewestItems -IncludeAnalysis | select name, items*, oldes*, top*
+
+    <# If any item is larger than 150 MB, there will be a problem moving it to the archive, and you will have to move it manually or delete it
+        Also note that the maximum number of objects per folder is one million
+        If any folder reaches the 1 million item limit, nothing will be transferred to that folder 
+        This is common for the Inbox, and when this happens, the ELC Assistant produces an error
+
+    from https://techcommunity.microsoft.com/blog/exchange/troubleshooting-retention-policies-in-exchange-online/3750197 #>
+
