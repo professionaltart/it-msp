@@ -1,26 +1,30 @@
 <#
-Powershell code to monitor mailbox/archive stats for ExchangeOnline
-Tested/working with Powershell versions 5.1 and 7.5.x
-Requires ExchangeOnline modeul already installed and Connected before running code
+  .SYNOPSIS
+  Powershell code to monitor mailbox/archive stats for ExchangeOnline
 
-Basic formatting using green test for value names, value data in default terminal colour
+  .DESCRIPTION
+  Tested/working with Powershell versions 5.1 and 7.5.x
+  Requires ExchangeOnline modeul already installed and Connected before running code
 
-Created while troubleshooting issues with ExchangeOnline auto-archival not processing despite being enabled, OR, auto-expansion not processing when required
-Will show:
-  Current date/time to compare between runs
-  Estimate of when mailbox was created 
-    (not reliable, refers to when it was created on current server - may have moved servers/locations since then)
-  OwnerID, MailboxGuID, Item-counts and Sizes (including within Deleted Items and Recoverable Items) for each 'mailbox location' 
-    (Primary mailbox, MainArchive, and each AuxArchives created during auto-expansion)
-  Retention Policy and Tags applied to mailbox 
-    (help confirm changes made to policies/tags between Start-ManagedFolderAssistant runs)
-  If Auto-Expanding archival is enabled for the mailbox and the tenancy
-  Name of archive as it appears in Outlook
+  Basic formatting using green test for value names, value data in default terminal colour
+
+  Created while troubleshooting issues with ExchangeOnline auto-archival not processing despite being enabled, OR, auto-expansion not processing when required
+  Will show:
+    Current date/time to compare between runs
+    Estimate of when mailbox was created 
+      (not reliable, refers to when it was created on current server - may have moved servers/locations since then)
+    OwnerID, MailboxGuID, Item-counts and Sizes (including within Deleted Items and Recoverable Items) for each 'mailbox location' 
+      (Primary mailbox, MainArchive, and each AuxArchives created during auto-expansion)
+    Retention Policy and Tags applied to mailbox 
+      (help confirm changes made to policies/tags between Start-ManagedFolderAssistant runs)
+    If Auto-Expanding archival is enabled for the mailbox and the tenancy
+    Name of archive as it appears in Outlook
   
-Usage:
+  .EXAMPLE
   Get-EXOadditionalMailbox $UPN
 
-Note: not structured to run from a .ps1 file
+  .Notes
+  Not (yet?) structured to run from a .ps1 file
 #>
 
 
