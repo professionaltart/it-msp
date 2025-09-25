@@ -1,0 +1,77 @@
+<#
+Powershell code to monitor mailbox/archive stats for ExchangeOnline
+Tested/working with Powershell versions 5.1 and 7.5.x
+Requires ExchangeOnline modeul already installed and Connected before running code
+
+Basic formatting using green test for value names, value data in default terminal colour
+
+Created while troubleshooting issues with ExchangeOnline auto-archival not processing despite being enabled, OR, auto-expansion not processing when required
+Will show:
+  Current date/time to compare between runs
+  Estimate of when mailbox was created 
+    (not reliable, refers to when it was created on current server - may have moved servers/locations since then)
+  OwnerID, MailboxGuID, Item-counts and Sizes (including within Deleted Items and Recoverable Items) for each 'mailbox location' 
+    (Primary mailbox, MainArchive, and each AuxArchives created during auto-expansion)
+  Retention Policy and Tags applied to mailbox 
+    (help confirm changes made to policies/tags between Start-ManagedFolderAssistant runs)
+  If Auto-Expanding archival is enabled for the mailbox and the tenancy
+  Name of archive as it appears in Outlook
+  
+Usage:
+  Get-EXOadditionalMailbox $UPN
+
+Note: not structured to run from a .ps1 file
+#>
+
+
+
+function Get-EXOAdditionalMailbox ($Identity) {
+    # scrape data for email account
+    $MailboxLocations = Get-MailboxLocation -User $Identity;
+    $EXOMailbox = Get-EXOMailbox $Identity -PropertySets Minimum, Archive, Policy -Properties WhenCreated;
+    $RetentionTags = Get-RetentionPolicyTag -Mailbox $Identity;
+    $MailboxDiagnosticLogs = ([xml](Export-MailboxDiagnosticLogs $Identity -ExtendedProperties).MailboxLog).Properties.MailboxTable.Property
+    $MFAlastfinished =  $MailboxDiagnosticLogs| Where-Object {$_.Name -eq "ELCLastSuccessTimestamp"};
+    $MFAcurrentlyActive = $MailboxDiagnosticLogs| Where-Object {$_.Name -eq "ElcAssistantLock"};
+    $EXOAdditionalMailbox = forEach($MailboxLocation in $MailboxLocations) {
+        $EXOMailboxStats = Get-EXOMailboxStatistics -Identity ($MailboxLocation.MailboxGuid).ToString()
+        $MailboxFolderStats = Get-MailboxFolderStatistics -Identity ($MailboxLocation.MailboxGuid).ToString() -FolderScope DeletedItems | select -first 1
+        # output this to the foreach loop:
+        [PSCustomObject]@{
+            "OwnerID"=$MailboxLocation.ownerid;
+            "MailboxGuID"=$MailboxLocation.MailboxGuid;
+            "MailboxLocationType"=$MailboxLocation.MailboxLocationType;
+            "ItemCount"=$EXOMailboxStats.Itemcount;
+            "TotalItemSize"=$EXOMailboxStats.TotalItemSize;
+            "DeletedItemCount"=$EXOMailboxStats.DeletedItemCount;
+            "TotalDeletedItemSize"=$EXOMailboxStats.TotalDeletedItemSize;
+            "RecoverableItemCount"=$MailboxFolderStats.ItemsInFOlderAndSubfolders;
+            "TotalRecoverableItemSize"=$MailboxFolderStats.FolderAndSubfolderSize;
+            }
+        }
+    # formatting/output:
+    Write-Host "";
+    Write-Host "Current time: " -ForegroundColor Green -NoNewLine; Write-Host $(Get-Date);
+    Write-Host "Current mailbox details:" -ForegroundColor Green;
+    Write-Host "";
+    Write-Host "Primary mailbox created (estimate): "-ForegroundColor Green -NoNewLine; Write-Host $EXOMailbox.whencreated;
+    Write-Host "ManagedFolderAssistant last finished running (UTC): "-ForegroundColor Green -NoNewLine; Write-Host $MFAlastfinished.Value;
+    Write-Host "Is ManagedFolderAssistant currently running? (blank or 0 = no, 1 = yes): "-ForegroundColor Green -NoNewLine; Write-Host $MFAcurrentlyActive.Value;
+    Write-Host "";
+    ($EXOAdditionalMailbox | Out-String).trim();
+    Write-Output "" ;
+    Write-Host "RetentionPolicy: " -ForegroundColor Green -NoNewLine; Write-Host $EXOMailbox.retentionpolicy;
+    Write-Host "RetentionPolicyTags: " -ForegroundColor Green -NoNewLine; Write-Host $RetentionTags.Name -NoNewLine; Write-Host " of Type: " -ForegroundColor Green -NoNewLine; Write-Host $RetentionTags.Type;
+    $InPlaceArchiveStatus = Switch ((Get-Mailbox $Identity).ArchiveStatus){'Active'{$True}; 'None'{$False}};
+        if ($InPlaceArchiveStatus) { 
+            Write-Host "Is Auto-Expanding Archive enabled for this mailbox? " -ForegroundColor Green -NoNewLine; Write-Host $EXOMailbox.AutoExpandingArchiveEnabled;
+            Write-Host "Is Auto-Expanding Archive enabled for this tenancy? " -ForegroundColor Green -NoNewLine; Write-Host (Get-OrganizationConfig).AutoExpandingArchiveEnabled
+            Write-Host "Archive Name (as it appears in Outlook): " -ForegroundColor Green -NoNewLine; Write-Host $EXOMailbox.ArchiveName;
+            Write-Host ""
+        }
+        else {
+            Write-Host "Archive is not enabled, cannot report details" -ForegroundColor Green;
+            Write-Host "";
+        }
+    return
+}
